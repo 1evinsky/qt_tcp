@@ -1,8 +1,13 @@
-#include <QCoreApplication>
+#include "core.h"
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+    static const QString ini_file{"/../server_settings/setting.ini"};
 
-    return a.exec();
+    Core core{argc, argv, ini_file};
+
+    qDebug() << core.settings()->value("test").toString();
+
+    return core.theCore()->exec();
 }
