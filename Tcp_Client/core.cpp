@@ -16,9 +16,9 @@ Core::Core(int &argc, char **argv, const QString &ini_file)
     }
 }
 
-QCoreApplication *Core::theCore()
+Core *Core::theCore()
 {
-    return QCoreApplication::instance();
+    return static_cast<Core*>(QCoreApplication::instance());
 }
 
 QSettings *Core::settings()

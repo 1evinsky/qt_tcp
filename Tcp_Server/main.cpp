@@ -1,4 +1,5 @@
 #include "core.h"
+#include "server.h"
 #include <QDebug>
 
 int main(int argc, char *argv[])
@@ -7,7 +8,9 @@ int main(int argc, char *argv[])
 
     Core core{argc, argv, ini_file};
 
-    qDebug() << core.settings()->value("test").toString();
+    Server server;
+    server.startServer();
 
+    core.theCore()->quit();
     return core.theCore()->exec();
 }

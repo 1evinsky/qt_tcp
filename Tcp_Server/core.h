@@ -11,7 +11,7 @@ class Core : public QCoreApplication
 public:
     Core(int &argc, char **argv, const QString &ini_file);
 
-    static QCoreApplication *theCore();
+    static Core *theCore();
 
     QSettings *settings();
 
