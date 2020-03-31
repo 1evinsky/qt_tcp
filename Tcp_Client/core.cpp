@@ -1,4 +1,5 @@
 #include "core.h"
+
 #include <QDir>
 #include <QDebug>
 

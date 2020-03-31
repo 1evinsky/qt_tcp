@@ -1,29 +1,33 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#include "clientworker.h"
+
+#include <QThread>
 #include <QObject>
-#include <QTcpSocket>
+#include <QFile>
+
 #include <memory>
-#include <vector>
 
 class Client : public QObject
 {
     Q_OBJECT
 public:
     explicit Client(QObject *parent = nullptr);
-
-    std::shared_ptr<QTcpSocket> m_socket;
-    int m_status = 2;
-    QByteArray m_data;
-    //std::vector<double> array;
-    quint32 m_nNextBlockSize;
+    ~Client();
     void start();
 
 signals:
 
 public slots:
-    void sockReady();
-    void sockDisc();
+    void errorString(QString error);
+    void writeToFile(QByteArray data);
+    void finished();
+
+private:
+    QFile *m_file = nullptr;
+    QThread *m_thread = nullptr;
+    ClientWorker *m_worker = nullptr;
 };
 
 #endif // CLIENT_H

@@ -4,6 +4,7 @@
 
 #include <QCoreApplication>
 #include <QSettings>
+
 #include <memory>
 
 class Core : public QCoreApplication

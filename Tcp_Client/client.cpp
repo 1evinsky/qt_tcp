@@ -1,100 +1,60 @@
 #include "client.h"
+
 #include "core.h"
-#include <iostream>
-#include <QHostAddress>
-#include <QDataStream>
+
+#include <QDateTime>
 
 Client::Client(QObject *parent) : QObject(parent)
 {
-    m_socket = std::make_shared<QTcpSocket>();
-    connect(m_socket.get(), &QTcpSocket::readyRead, this, &Client::sockReady);
-    connect(m_socket.get(), &QTcpSocket::disconnected, this, &Client::sockDisc);
-    m_nNextBlockSize = 0;
+    m_thread = new QThread;
+    m_worker = new ClientWorker(this);
+    m_file = new QFile;
+}
+
+Client::~Client()
+{
+    if(m_thread->isRunning()){
+        m_thread->exit(0);
+    }
+    if(m_file->isOpen()){
+        m_file->close();
+    }
 }
 
 void Client::start()
 {
-     qDebug() << Core::theCore()->settings()->value("address").toString();
-     QHostAddress address{Core::theCore()->settings()->value("address").toString()};
-
-     qDebug() << Core::theCore()->settings()->value("port").toUInt();
-     auto port{Core::theCore()->settings()->value("port").toUInt()};
-
-     qDebug() << Core::theCore()->settings()->value("value").toDouble();
-     double value {Core::theCore()->settings()->value("value").toDouble()};
-
-     m_socket->connectToHost(address, static_cast<quint16>(port));
-
-     QByteArray block;
-     QDataStream sendStream(&block, QIODevice::ReadWrite);
-
-     //sendStream << quint16(0);
-     sendStream << value;
-     //sendStream.device()->seek(0);
-     //sendStream << (quint16)(block.size() - sizeof(quint16));
-     m_socket->write(block);
+     m_worker->moveToThread(m_thread);
+     connect(m_worker, &ClientWorker::error, this, &Client::errorString);
+     connect(m_worker, &ClientWorker::writeToFile, this, &Client::writeToFile);
+     connect(m_thread, &QThread::started, m_worker, &ClientWorker::process);
+     connect(m_worker, &ClientWorker::finished, m_thread, &QThread::quit);
+     connect(m_worker, &ClientWorker::finished, m_worker, &ClientWorker::deleteLater);
+     connect(m_thread, &QThread::finished, m_thread, &Client::deleteLater);
+     connect(m_thread, &QThread::finished, this, &Client::finished);
+     m_thread->start();
 }
 
-void Client::sockReady()
+void Client::errorString(QString error)
 {
-//    if(m_socket->waitForConnected(500))
-//    {
-//        m_socket->waitForReadyRead(500);
-//    }
-//    double buff;
-//    QDataStream stream(m_socket.get());
-//    stream.setFloatingPointPrecision(QDataStream::DoublePrecision);
-//    qint16 m_msgSize = -1;
-//    while(true) {
-//      if (m_msgSize < 0) {
-//         if (m_socket->bytesAvailable() < sizeof(int))
-//           return;
-//         stream >> m_msgSize;
-//         qDebug() << "size: " << m_msgSize;
-//      }
-//      else {
-//        if (m_socket->bytesAvailable() < m_msgSize)
-//           return;
-//        for(int i = 0; i < (m_msgSize/sizeof(double)); i++)
-//        {
-//            stream >> buff;
-//            qDebug() << i << " data: " << buff;
-//        }
-//        m_msgSize = -1;
-//      }
-//    }
-    //m_socket->waitForReadyRead();
-    QDataStream in(m_socket.get());
-    for(;;)
+    qDebug() << error;
+}
+
+void Client::writeToFile(QByteArray data)
+{
+    const QString filename = "data_" + QDateTime::currentDateTime().toString("hh_mm_ss_zzz");
+    m_file->setFileName(filename);
+    if(!m_file->open(QFile::ReadWrite))
     {
-        qDebug() << "m_socket->bytesAvailable() " << m_socket->bytesAvailable();
-        if(!m_nNextBlockSize)
-        {
-            if (m_socket->bytesAvailable() < sizeof(quint32)) {
-                break;
-            }
-            in >> m_nNextBlockSize;
-            qDebug() << "size " << m_nNextBlockSize;
-        }
-        if (m_socket->bytesAvailable() < m_nNextBlockSize) {
-            break;
-        }
-        double value;
-        int i = 0;
-        while (m_nNextBlockSize != 0){
-            in >> value;
-            if(i%100000 == 0)
-            {
-                qDebug() << value;
-            }
-            i++;
-            m_nNextBlockSize = m_nNextBlockSize - sizeof(double);
-        }
+        qDebug() << "no open";
+        return;
     }
-    Core::theCore()->exit(0);
+    m_file->write(data.data(),data.size());
+    m_file->waitForBytesWritten(3000);
+    m_file->close();
+    qDebug() << "Write to File. File size is: " << m_file->size();
 }
 
-void Client::sockDisc()
+void Client::finished()
 {
-    m_socket->deleteLater();
+    Core::theCore()->exit(0);
 }

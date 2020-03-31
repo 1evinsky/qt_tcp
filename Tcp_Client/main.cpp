@@ -1,6 +1,5 @@
 #include "core.h"
 #include "client.h"
-#include <QDebug>
 
 int main(int argc, char *argv[])
 {
@@ -10,8 +9,6 @@ int main(int argc, char *argv[])
 
     Client client;
     client.start();
-
-    qDebug() << core.settings()->value("test").toString();
 
     return core.theCore()->exec();
 }
